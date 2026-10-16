@@ -1,0 +1,5 @@
+venv/
+__pycache__/
+bajas.db
+datos.xlsx
+static/uploads/
