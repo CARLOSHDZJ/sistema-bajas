@@ -1,0 +1,11 @@
+{
+  "name": "Sistema de Bajas (Demo)",
+  "postCreateCommand": "pip install -r requirements.txt",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Sistema de Bajas Web",
+      "onAutoForward": "openPreview"
+    }
+  }
+}

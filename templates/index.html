@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Recolección de Bajas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
+    <div class="container-fluid">
+        <a class="navbar-brand animate__animated animate__fadeIn" href="/">🚚 SISTEMA DE RECOLECCION DE BAJAS</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                <li class="nav-item">
+                    <span class="nav-link text-white me-3 small fw-bold">
+                        <i class="fa-solid fa-user-shield text-info"></i> {{ session['username'] }}
+                    </span>
+                </li>
+                {% if session['rol'] == 'admin' %}
+                <li class="nav-item my-1 my-lg-0">
+                    <a href="/admin" class="btn btn-warning btn-sm me-lg-2 fw-bold text-dark d-block text-center">
+                        <i class="fa-solid fa-gear"></i> Panel Admin
+                    </a>
+                </li>
+                {% endif %}
+                <li class="nav-item my-1 my-lg-0">
+                    <a href="/reportes" class="btn btn-outline-info btn-sm me-lg-2 d-block text-center text-white">📊 Estadísticas</a>
+                </li>
+                <li class="nav-item my-1 my-lg-0">
+                    <a href="/historial" class="btn btn-outline-secondary btn-sm me-lg-2 d-block text-center text-white">🗄️ Historial</a>
+                </li>
+                <li class="nav-item my-1 my-lg-0">
+                    <a href="/cambiar_password" class="btn btn-outline-light btn-sm me-lg-2 d-block text-center text-white">
+                        <i class="fa-solid fa-key"></i> Contraseña
+                    </a>
+                </li>
+                <li class="nav-item my-1 my-lg-0">
+                    <a href="/logout" class="btn btn-danger btn-sm shadow-sm d-block text-center">
+                        <i class="fa-solid fa-right-from-bracket"></i> Salir
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Solicitudes Pendientes</h3>
+        <a href="/nueva" class="btn btn-primary">+ Nueva Solicitud</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tablaSolicitudes" class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%">Días</th>
+                        <th style="width: 15%">Datos Escuela</th>
+                        <th style="width: 25%">Observaciones</th>
+                        <th style="width: 15%">Contacto</th>
+                        <th style="width: 25%">Fecha de Recoleccion</th> <th style="width: 15%">Acciones</th>
+                            </tr>
+                            </thead>
+                    <tbody>
+                        {% for sol in solicitudes %}
+                        <tr class="{% if sol.dias_transcurridos > 30 %}table-danger{% endif %}">
+                            <td class="text-center align-middle" style="width: 5%">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="fs-5 fw-bold text-secondary">{{ sol.dias_transcurridos }}</span>
+                                    
+                                    {% if sol.dias_transcurridos <= 15 %}
+                                        <span class="badge bg-success rounded-pill shadow-sm">
+                                            <i class="fa-solid fa-check"></i> Al día
+                                        </span>
+                                    {% elif sol.dias_transcurridos <= 30 %}
+                                        <span class="badge bg-warning text-dark rounded-pill shadow-sm">
+                                            <i class="fa-solid fa-clock"></i> Atento
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger rounded-pill shadow-sm animate__animated animate__pulse animate__infinite">
+                                            <i class="fa-solid fa-fire"></i> Urgente
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ sol.ct }}</strong><br>
+                                {{ sol.municipio }}<br>
+                                <span class="badge bg-info text-dark">{{ sol.region }}</span><br>
+                                Bienes: <strong>{{ sol.cantidad_bienes }}</strong>
+                            </td>
+
+                            <td class="bg-light text-muted">
+                            <small><em>{{ sol.observaciones }}</em></small>
+                            </td>
+
+                            <td>
+                                {{ sol.contacto }}<br>
+                                {% if sol.nombre_expediente %}
+                                <a href="{{ url_for('static', filename='uploads/' + sol.nombre_expediente) }}" 
+                            class="btn btn-sm btn-outline-primary mt-1" target="_blank">📄 PDF</a>
+                                {% endif %}
+                            </td>
+                            <td class="{% if sol.fecha_programada %}bg-success-subtle{% else %}bg-light{% endif %}">
+                                <form action="/actualizar/{{ sol.id }}" method="POST" enctype="multipart/form-data" class="border p-2 rounded {% if sol.fecha_programada %}bg-white border-success shadow{% else %}bg-white shadow-sm{% endif %}">
+    
+                                 <label class="form-label small fw-bold mb-1">
+                                    {% if sol.fecha_programada %}<span class="text-success">✅ Programado</span>{% else %}📅 Programar{% endif %}
+                                 </label>
+    <input type="date" name="fecha_programada" value="{{ sol.fecha_programada }}" class="form-control form-control-sm mb-1 {% if sol.fecha_programada %}border-success{% endif %}">
+    
+    <textarea name="observaciones_extra" class="form-control form-control-sm mb-1 text-uppercase" rows="2" placeholder="OBSERVACIONES">{{ sol.observaciones_extra or '' }}</textarea>
+    
+<label class="btn btn-outline-primary btn-sm w-100 mb-1 fw-bold shadow-sm" style="cursor: pointer; border: 2px dashed #0d6efd;">
+    <i class="fa-solid fa-camera"></i> <span>Seleccionar Foto</span>
+    <input type="file" name="foto_evidencia" accept="image/*" hidden 
+           onchange="this.previousElementSibling.innerText = '✅ Foto Lista'; this.parentElement.classList.remove('btn-outline-primary'); this.parentElement.classList.add('btn-primary'); this.parentElement.style.border = 'none';">
+</label>    
+    <button type="submit" class="btn btn-sm btn-dark w-100">💾 Guardar Nota y Foto</button>
+</form>
+                            </td>
+                            <td class="text-center">
+                                {% if session.get('rol') == 'visor' %}
+                                <button class="btn btn-warning btn-sm fw-bold w-100 disabled" style="opacity: 0.5;">
+                                    ✏️ Editar Datos
+                                </button>
+                                <button class="btn btn-success btn-sm w-100 mt-1 mb-2 disabled" style="opacity: 0.5;">
+                                    ✅ Finalizar
+                                </button>
+                                {% else %}
+                                <a href="/editar/{{ sol.id }}" class="btn btn-warning btn-sm fw-bold w-100">
+                                        ✏️ Editar Datos
+                                    </a>
+                                <a href="/finalizar/{{ sol.id }}" class="btn btn-success btn-sm w-100 mt-1 mb-2" onclick="return confirm('¿Finalizar?')">
+                                    ✅ Finalizar
+                                </a>
+                                {% endif %}
+                                {% if sol.foto_evidencia %}
+    <a href="{{ url_for('static', filename='uploads/' + sol.foto_evidencia) }}" target="_blank" class="btn btn-outline-primary btn-sm w-100">
+        📷 Ver Evidencia
+    </a>
+{% else %}
+    <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+        🚫 Sin Foto
+    </button>
+{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#tablaSolicitudes').DataTable({
+            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }, // Español
+            dom: 'Bfrtip', // Habilita los botones
+            buttons: [
+                { extend: 'excel', text: '📊 Excel', className: 'btn btn-success btn-sm' },
+                { extend: 'pdf', text: '📄 PDF', className: 'btn btn-danger btn-sm' },
+                { extend: 'print', text: '🖨️ Imprimir', className: 'btn btn-secondary btn-sm' }
+            ],
+            pageLength: 10, // Cuántos registros por página
+            order: [[0, 'desc']] // Ordenar por días descendente
+        });
+    });
+</script>
+<footer class="bg-dark text-white text-center py-3 mt-5 shadow-lg">
+    <div class="container">
+        <p class="mb-0 fw-bold">DEPARTAMENTO DE INVENTARIOS</p>
+        <small class="text-white-50">Sistema de Recolección de Bajas • Departamento de Inventarios • Versión 1.0</small>
+        <div class="mt-1">
+            <small>© 2026 CHDZ</small>
+        </div>
+    </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
